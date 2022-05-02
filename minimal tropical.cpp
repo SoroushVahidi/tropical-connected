@@ -8,14 +8,12 @@
 #include <map>
 #include <conio.h>
 #include <ilcplex\ilocplex.h>
-#include <ctime>
 
 using namespace std;
 
 ifstream fin;
 ifstream qin;
-ofstream fout("answers exact.txt");
-
+ofstream fout("answers taghribi.txt");
 double limit=300;
 clock_t start;
 double gettime(){
@@ -351,124 +349,142 @@ set<int> bfs(graph g,int a,IloNumArray sval){
   r.insert(fehrest.begin(),fehrest.end());
   return r;
 }
-double best=10000;
-int bar=0;
-bool okcon(vector<int> u,IloNumArray sval){
-	
+double best;
+vector<int> A(graph g,set<int> u){
+	vector<int> q;
+	q.clear();
+	for(set<int>::iterator it=u.begin();it!=u.end();it++)
+		for(set<int>::iterator it2=g.adj[*it].begin();it2!=g.adj[*it].end();it2++)
+			if(u.find(*it2)==u.end())
+				q.push_back(*it2);
+	return q;
+}
+bool okcon(vector<int> u,IloNumArray sval){	
 	double jam=0;
 	for(int i=0;i<u.size();i++)
-		jam+=sval[u[i]];
-		
-	return (jam>=0.99);
+		jam+=sval[u[i]];		
+	return (jam>=1);
 }
-typ hambandsaz(typ model,graph g){
+int bar=0;
+typ hambandsaz(typ model,graph g,double javab){
 	if(gettime()>limit){
 		timelimit=true;
 		return model;
 	}
 	IloEnv env=model.en;
-	
 	double mini=0;
 	int cc=0;
 	double xz=getval(model);
 	if(xz>best)
 		return model;
 	while(1){
-		
 		IloCplex solver(model.mod);
 		solver.setOut(env.getNullStream());
 		solver.solve();
 		bar++;
 	//	solver.exportModel(("mymodel"+to_string(bar)+".lp").c_str());
-		
-	//cerr<<"tooloop"<<endl;
-		//cerr<<xz<<endl;
+//		cerr<<xz<<endl;
 		if(xz>best)
 			return model;
 		//fout<<"after "<<bar<<" constraints added,obj value is :"<<xz<<endl;
-//	if(javab==xz)
-	//	return model;
-	mini=xz;
-	IloNumArray sval(env);
-	solver.getValues(sval,model.x);
-	//md=model;
-	//jav=sval;
-	solver.end();
-  //cerr<<sval<<endl;
-  //getch();
-	int fir=-1;
-	for(int i=0;i<sval.getSize();i++)
-	  if((sval[i]>0.99)){
-		  fir=i;
-		  break;
-	  }
-	if(fir==-1)
-		return model;
-	set<int> w=bfs(g,fir,sval);
-	set<int> shenakhte=w;
-	vector<set<int> >moal;
-	moal.clear();
-	vector<int> conon;
-	conon.clear();
-	conon.push_back(fir);
-	moal.push_back(w);
+		//if(javab==xz)
+		//	return model;
+		mini=xz;
+		IloNumArray sval(env);
+		solver.getValues(sval,model.x);
+		//md=model;
+		//jav=sval;
+		solver.end();
+	  //cerr<<sval<<endl;
+	  //getch();
+		int fir=-1;
+		for(int i=0;i<sval.getSize();i++)
+		  if((sval[i]>0.99)){
+			  fir=i;
+			  break;
+		  }
+		if(fir==-1)
+			return model;
+		set<int> w=bfs(g,fir,sval);
+		set<int> shenakhte=w;
+		vector<set<int> >moal;
+		moal.clear();
+		vector<int> conon;
+		conon.clear();
+		conon.push_back(fir);
+		moal.push_back(w);
+//		cerr<<fir<<endl;
+//		cerr<<sval<<endl;
+//		wr(w);
+//		getch();
 //	moal.push_back(w);
  // wr(bfs(t,0));
-	bool ok=true;
-	for(int i=fir+1;i<sval.getSize();i++)
-		if((sval[i]>0.99)&&(shenakhte.find(i)==shenakhte.end())){
-			ok=false;
-			set<int> y=bfs(g,i,sval);
-			moal.push_back(y);
-			shenakhte.insert(y.begin(),y.end());
-			conon.push_back(i);
-		//	break;
-		}
- // t.print();
- // cerr<<p.size()<<endl;
-	if(!ok){
-		//cerr<<moal.size()<<endl;
-		bool added=false;
-		for(int l=0;l<moal.size();l++)
-			for(int j=l+1;j<moal.size();j++){	
-		  // wr(y);
-				vector<int> z=minimal_sep(g,moal[l],moal[j]);
-				
-				if(okcon(z,sval)){
-					added=true;
-				//	cerr<<"mabda:"<<endl;
-					//wr(moal[l]);
-					//cerr<<"maghsad:"<<endl;
-					//wr(moal[j]);
-					IloExpr exp(env);
-					//cerr<<"bayad begzare:"<<endl;
-					for( int i=0;i<z.size();i++){
-						//  cerr<<z[i]+1<<' ';
-						exp+=model.x[z[i]];
+		bool ok=true;
+		for(int i=fir+1;i<sval.getSize();i++)
+			if((sval[i]>0.99)&&(shenakhte.find(i)==shenakhte.end())){
+				ok=false;
+				set<int> y=bfs(g,i,sval);
+				moal.push_back(y);
+				shenakhte.insert(y.begin(),y.end());
+				conon.push_back(i);
+			//	break;
+			}
+	 // t.print();
+	 // cerr<<p.size()<<endl;
+		if(!ok){
+			cerr<<moal.size()<<endl;
+			bool added=false;
+			vector<vector<int> >comps;
+			comps.clear();
+			for(int i=0;i<moal.size();i++)
+				comps.push_back(A(g,moal[i]));
+			for(int l=0;l<moal.size();l++)
+				for(int j=l+1;j<moal.size();j++){	
+					vector<int> z=comps[l];
+					
+				//	vector<int> z=minimal_sep(g,moal[l],moal[j]);
+					if(!okcon(z,sval)){
+					//	cerr<<"mabda: ";
+					//	wr(moal[l]);
+					//	cerr<<"maghsad: ";
+					//	wr(moal[j]);
+						//cerr<<"bayad begzare az: ";
+						added=true;
+						IloExpr exp(env);
+						for( int i=0;i<z.size();i++){
+						//	 cerr<<z[i]+1<<' ';
+							exp+=model.x[z[i]];
+						}
+						model.mod.add(IloConstraint(exp>=model.x[conon[l]]+model.x[conon[j]]-1));
+						//break;
+						//cerr<<endl<<endl;
+					//	getch();
 					}
-					//cerr<<sval<<endl<<q<<endl<<endl;
-					//cerr<<endl<<endl;;
-					//break;
-				//getch();
-	//  int l=*w.begin();
-	 // int k=*y.begin();
-					model.mod.add(IloConstraint(exp>=model.x[conon[l]]+model.x[conon[j]]-1));
-				}
+					vector<int> z2=comps[j];
+					if(!okcon(z2,sval)){
+						IloExpr exp2(env);
+                        added=true;					
+						for(int i=0;i<z2.size();i++)
+							exp2+=model.x[z2[i]];
+		//  int l=*w.begin();
+		 // int k=*y.begin();
+					
+						model.mod.add(IloConstraint(exp2>=model.x[conon[l]]+model.x[conon[j]]-1));
+					}
+			}
+			if(added==false)
+				return model;
+			else
+				return hambandsaz(model,g,xz);
+		//  getch();
+		//  cerr<<sval<<endl;
 		}
-		if(added==false)
+		else{	
+		//	cerr<<sval<<endl;
+			//t.print();
 			return model;
-		else
-	 // bar++;
-			return hambandsaz(model,g);
-	//  getch();
-	//  cerr<<sval<<endl;
-	}
-	else{	
-	//	cerr<<sval<<endl;
-		//t.print();
-		return model;
-		break;
-	}
+			break;
+		}
   }
   return model;
 }
@@ -479,8 +495,7 @@ typ rec(typ asghar,graph g){
 		return asghar;
 	}
 	tim++;
-	typ voroodi=hambandsaz(asghar,g);
-	
+	typ voroodi=hambandsaz(asghar,g,-1);
 	bool ok=true;
 	IloCplex solver(voroodi.mod);
 	//solver.exportModel(("mymodel"+to_string(tim)+".lp").c_str());
@@ -509,6 +524,7 @@ typ rec(typ asghar,graph g){
 		}	
 	if(ok){
 		//cerr<<"i found a solution with objval=  "<<x<<endl;
+	//	cerr<<sval<<endl;
 		//getch();
 		best=min(best,x);
 		return voroodi;
@@ -561,7 +577,7 @@ typ rec(typ asghar,graph g){
 
 
 int main(){
-	for(int ff=21;ff<=21;ff++){
+	for(int ff=21;ff<=30;ff++){
 		string s1="graph"+to_string(ff)+".txt";
 		string s2="color"+to_string(ff)+".txt";
 		fin.open(s1);
@@ -586,8 +602,8 @@ int main(){
 		getch();*/
 	 // Minisat::Solver solver;
 	 // auto A = solver.newVar();
-	 timelimit=false;
-	 start=clock();
+	  timelimit=false;
+	  start=clock();
 	  g.read();
 	  best=g.v;
 	  typ model(env,g);
@@ -624,7 +640,7 @@ int main(){
 	 IloNumArray sval(env);
 	 solver.getValues(sval,model.x);
 	 //cerr<<nahayi.mod<<endl;
-	 cerr<<sval<<endl;
+	//cerr<<sval<<endl;
 	 int ans=getval(nahayi);
 	 fout<<"test "<<ff<<": ";
 	 fout<<g.v<<' '<<g.numedges()<<' ';
@@ -632,12 +648,11 @@ int main(){
 		 fout<<"timelimit"<<endl;
 	 else
 		 fout<<gettime()<<' '<<ans<<endl;
-	// fout<<getval(nahayi)<<endl;
-	 //cerr<<"ended!"<<endl;
+	// cerr<<"ended!"<<endl;
 	  fin.close();
 	  qin.close();
-	  getch();
+	//  getch();
 	}
-	//getch();
-  return 0;
+//	getch();
+	return 0;
 }
